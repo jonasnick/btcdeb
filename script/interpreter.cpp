@@ -295,7 +295,6 @@ bool StepScript(ScriptExecutionEnvironment& env, CScriptIter& pc, CScript* local
         return set_error(serror, SCRIPT_ERR_OP_COUNT);
 
     if (opcode == OP_CAT ||
-        opcode == OP_SUBSTR ||
         opcode == OP_LEFT ||
         opcode == OP_RIGHT ||
         opcode == OP_INVERT ||
@@ -711,6 +710,36 @@ bool StepScript(ScriptExecutionEnvironment& env, CScriptIter& pc, CScript* local
         }
         break;
 
+        case OP_SUBSTR:
+        {
+            if (stack.size() < 3)
+                return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+            valtype vch1 = stacktop(-3);
+            CScriptNum start(stacktop(-2), fRequireMinimal);
+            CScriptNum length(stacktop(-1), fRequireMinimal);
+
+            if (length < 0 || start < 0)
+                return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+            if (start >= vch1.size())
+                return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+            if (length > vch1.size())
+                return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+            if ((start + length) > vch1.size())
+                return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+            valtype vch2;
+            vch2.insert(vch2.begin(), vch1.begin() + start.getint(), vch1.begin() + (start + length).getint());
+
+            popstack(stack);
+            popstack(stack);
+            popstack(stack);
+            stack.push_back(vch2);
+        }
+        break;
 
         //
         // Bitwise logic
